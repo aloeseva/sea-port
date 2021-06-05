@@ -5,11 +5,13 @@ import app.domain.entities.dto.ShipDto;
 import app.service.MyDateServ;
 import app.service.PortServ;
 import app.service.SimulationServ;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class SimulationServImpl implements SimulationServ {
+    static Logger LOGGER = Logger.getLogger(SimulationServImpl.class);
     private final PortServ portServ;
     private final MyDateServ myDateServ;
 
@@ -25,7 +27,8 @@ public class SimulationServImpl implements SimulationServ {
         portServ.initPort();
 
         while (true) {
-            System.out.println("--------------" + date.toString() + "--------------");
+//            System.out.println("--------------" + date.toString() + "--------------");
+            LOGGER.info("--------------" + date + "--------------");
             portServ.unloadShips(date);
             ShipDto shipDto = portServ.getNotArrivedShipOrEmpty();
             if (shipDto != null) {

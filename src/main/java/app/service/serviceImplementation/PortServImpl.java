@@ -4,129 +4,111 @@ import app.domain.entities.dto.CraneDto;
 import app.domain.entities.dto.MyDate;
 import app.domain.entities.dto.ScheduleDto;
 import app.domain.entities.dto.ShipDto;
-import app.service.CraneServ;
-import app.service.MyDateServ;
-import app.service.PortServ;
-import app.service.ShipServ;
+import app.service.*;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
 @Service
 public class PortServImpl implements PortServ {
-    private static List<ScheduleDto> scheduleDtoList = new ArrayList<>();
+    static Logger LOGGER = Logger.getLogger(PortServImpl.class);
     private final ShipServ shipRep;
-    private final MyDateServ myDate;
+    private final CargoTypeServ cargoTypeService;
     private final CraneServ craneService;
-    private final Random random = new Random();
+    private Random random = new Random();
+    private final ScheduleServ scheduleService;
+
+    @Autowired
+    public PortServImpl(ShipServ shipRep, CargoTypeServ cargoTypeService, CraneServ craneService, ScheduleServ scheduleService) {
+        this.shipRep = shipRep;
+        this.cargoTypeService = cargoTypeService;
+        this.craneService = craneService;
+        this.scheduleService = scheduleService;
+    }
 
     @Value("${result.count}")
     private int count;
 
-    @Autowired
-    public PortServImpl(ShipServ shipRep, MyDateServ myDate, CraneServ craneService) {
-        this.shipRep = shipRep;
-        this.craneService = craneService;
-        this.myDate = myDate;
-    }
-
     @Override
     public void initPort() {
+        cargoTypeService.init();
         shipRep.initShips();
         craneService.initCranes();
-        List<ShipDto> shipDtos = shipRep.getShipList();
-        for (int i = 0; i < count; i++) {
-            scheduleDtoList.add(new ScheduleDto(myDate.getRandomDate(), shipDtos.get(i)));
-        }
+        scheduleService.initSchedule();
     }
 
-    @Override
-    public List<ScheduleDto> getScheduleList() {
-        return scheduleDtoList;
-    }
 
     @Override
     public void unloadShips(MyDate date) {
-        List<ScheduleDto> scheduleDtos = getScheduleList();
-        for (ScheduleDto sc : scheduleDtos) {
+        List<ScheduleDto> schedules = scheduleService.getAll();
+        for (ScheduleDto sc : schedules) {
             //разгружаем корабль
-            if (sc.getCraneDto() != null && sc.getEndOfUnloading() == null) {
-                int unWeight = (int) (sc.getCraneDto().getSpeed() * sc.getCraneDto().getCargoType().getRate());
-
-                sc.setShipDto(shipRep.doUnloading(sc.getShipDto(), unWeight));
-                if (sc.getShipDto().getWeightCargo() != 0) {
-                    System.out.print("Разгружаем корабль " + sc.getShipDto().getName() + " " + sc.getShipDto().getCargoType().name());
-                    System.out.println(" начальный вес : " + sc.getWeightCargo() + " ,текущий вес " + sc.getShipDto().getWeightCargo());
+            if (sc.getCrane() != null && sc.getEndOfUnloading() == null) {
+                int unWeight = (int) (sc.getCrane().getSpeed() * sc.getCrane().getCargoType().getUnloadingRatio());
+                ShipDto ship = shipRep.doUnloading(sc.getShip(), unWeight);
+                if (sc.getShip().getWeightCargo() != 0) {
+//                    System.out.print("Разгружаем корабль " + sc.getShip().getName() + " " + sc.getShip().getCargoType().getName());
+//                    System.out.println(" начальный вес : " + sc.getWeightCargo() + " ,текущий вес " + ship.getWeightCargo());
+                    LOGGER.info("Разгружаем корабль " + sc.getShip().getName() + " " + sc.getShip().getCargoType().getName());
+                    LOGGER.info(" начальный вес : " + sc.getWeightCargo() + " ,текущий вес " + ship.getWeightCargo());
                 }
             }
             //не закончилась ли разгрузка
-            if (sc.getShipDto().getWeightCargo() == 0 && sc.getEndOfUnloading() == null) {
-                System.out.println("Завершение разгрузки корабля " + sc.getShipDto().getName() + " " + sc.getShipDto().getCargoType().name());
-                sc.setEndOfUnloading(date);
-                craneService.endOfUnload(sc.getCraneDto());
+            if (sc.getShip().getWeightCargo() == 0 && sc.getEndOfUnloading() == null) {
+//                System.out.println("Завершение разгрузки корабля " + sc.getShip().getName() + " " + sc.getShip().getCargoType().getName());
+                LOGGER.info("Завершение разгрузки корабля " + sc.getShip().getName() + " " + sc.getShip().getCargoType().getName());
+                scheduleService.updateScheduleEndOfUnloading(sc.getId(), date);
+                craneService.endOfUnload(sc.getCrane());
             }
         }
-        scheduleDtoList = new ArrayList<>(scheduleDtos);
     }
 
 
     @Override
-    public void shipArrival(ShipDto shipDto, MyDate date) {
-        if (shipDto != null) {
-            System.out.print("Прибытие корабля " + shipDto.getName() + " , информация  о  расписании: ");
-            List<ScheduleDto> list = getScheduleList();
-            for (ScheduleDto sch : list) {
-                if (sch.getShipDto().equals(shipDto)) {
-                    sch.setRealArrivalDate(date);
-                    System.out.println(sch);
-                }
-            }
-            scheduleDtoList = new ArrayList<>(list);
-        }
+    public void shipArrival(ShipDto ship, MyDate date) {
+//        System.out.print("Прибытие корабля " + ship.getName() + " , информация  о  расписании: ");
+        LOGGER.info("Прибытие корабля " + ship.getName() + " , информация  о  расписании: ");
+        ScheduleDto schedule = scheduleService.getScheduleByShip(ship.getId());
+        ScheduleDto schedule1 = scheduleService.updateScheduleRealDate(schedule.getId(), date);
+        System.out.println(schedule1.toString());
     }
 
     @Override
     public ShipDto getNotArrivedShipOrEmpty() {
-        List<ScheduleDto> list = getScheduleList();
+        List<ScheduleDto> list = scheduleService.getAll();
         int indOfSchedule = random.nextInt(count - 1);
-        ScheduleDto scheduleDto = list.get(indOfSchedule);
-        if (scheduleDto.getRealArrivalDate() == null) {
-            return scheduleDto.getShipDto();
+        ScheduleDto schedule = list.get(indOfSchedule);
+        if (schedule.getRealArrivalDate() == null) {
+            return schedule.getShip();
         }
         return null;
     }
 
-    static int ll = 0;
-
     @Override
     public void checkUnload(MyDate date) {
-        ll++;
-        List<ScheduleDto> scheduleDtos = getScheduleList();
-        Collections.sort(scheduleDtos);
-        if (ll == 7) {
-            int y;
-            System.out.print("");
-        }
-        for (ScheduleDto scheduleDto : scheduleDtos) {
-            if (scheduleDto.getRealArrivalDate() != null && scheduleDto.getCraneDto() == null) {
-                CraneDto craneDto = craneService.getFreeCraneByType(scheduleDto.getShipDto().getCargoType());
+
+        List<ScheduleDto> schedules = scheduleService.getAll();
+        Collections.sort(schedules);
+
+        for (ScheduleDto schedule : schedules) {
+            if (schedule.getRealArrivalDate() != null && schedule.getCrane() == null) {
+                CraneDto crane = craneService.getFreeCraneByType(schedule.getShip().getCargoType());
                 //Начинаем разгрузку
-                if (craneDto != null) {
-                    int indexSchedule = scheduleDtos.indexOf(scheduleDto);
-                    System.out.println("Начинаем разгрузку корабля " + scheduleDto.getShipDto().getName() + " " + scheduleDto.getShipDto().getCargoType().name());
-                    scheduleDtos.get(indexSchedule).setCraneDto(craneDto);
-                    scheduleDtos.get(indexSchedule).setStartOfUnloading(date);
-                    craneService.startOfUnload(craneDto);
+                if (crane != null) {
+//                    System.out.println("Начинаем разгрузку корабля " + schedule.getShip().getName() + " " + schedule.getShip().getCargoType().getName());
+                    LOGGER.info("Начинаем разгрузку корабля " + schedule.getShip().getName() + " " + schedule.getShip().getCargoType().getName());
+                    scheduleService.updateScheduleCraneAndStart(schedule.getId(), crane.getId(), date);
+                    craneService.startOfUnload(crane);
                 } else {
-                    System.out.println("Корабль " + scheduleDto.getShipDto().getName() + " " + scheduleDto.getShipDto().getCargoType().name() + " ожидает разгрузки");
+//                    System.out.println("Корабль " + schedule.getShip().getName() + " " + schedule.getShip().getCargoType().getName() + " ожидает разгрузки");
+                    LOGGER.info("Корабль " + schedule.getShip().getName() + " " + schedule.getShip().getCargoType().getName() + " ожидает разгрузки");
                 }
             }
         }
-        scheduleDtoList = new ArrayList<>(scheduleDtos);
     }
 }

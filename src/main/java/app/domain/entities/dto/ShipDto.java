@@ -1,18 +1,18 @@
 package app.domain.entities.dto;
 
-import app.domain.enums.CargoType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-
-import javax.persistence.Entity;
+import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class ShipDto {
+    private Integer id;
     /**
      * @param cargoType -  тип корабля
      */
-    private CargoType cargoType;
+    private CargoTypeDto cargoType;
     /**
      * @param name -  название корабля
      */
@@ -22,6 +22,12 @@ public class ShipDto {
      * @param weight -  осталось для разгрузки, тонн
      */
     private int weightCargo;
+
+    public ShipDto(CargoTypeDto cargoType, String name, int weightCargo) {
+        this.cargoType = cargoType;
+        this.name = name;
+        this.weightCargo = weightCargo;
+    }
 
     @Override
     public String toString() {

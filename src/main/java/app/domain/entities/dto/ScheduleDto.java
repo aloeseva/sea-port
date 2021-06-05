@@ -2,10 +2,13 @@ package app.domain.entities.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class ScheduleDto implements Comparable<ScheduleDto> {
+    private Integer id;
     /**
      * @param arrivalDate - предварительная дата  прибытия корабля
      */
@@ -17,11 +20,11 @@ public class ScheduleDto implements Comparable<ScheduleDto> {
     /**
      * @param ship -   корабль
      */
-    private ShipDto shipDto;
+    private ShipDto ship;
     /**
      * @param crane -   кран, который разгружает корабль
      */
-    private CraneDto craneDto;
+    private CraneDto crane;
     /**
      * @param weight -  вес груза, тонн
      */
@@ -35,10 +38,10 @@ public class ScheduleDto implements Comparable<ScheduleDto> {
      */
     private MyDate endOfUnloading;
 
-    public ScheduleDto(MyDate arrivalDate, ShipDto shipDto) {
+    public ScheduleDto(MyDate arrivalDate, ShipDto ship) {
         this.arrivalDate = arrivalDate;
-        this.shipDto = shipDto;
-        this.weightCargo = shipDto.getWeightCargo();
+        this.ship = ship;
+        this.weightCargo = ship.getWeightCargo();
 
     }
 

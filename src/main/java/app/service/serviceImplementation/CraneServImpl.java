@@ -1,54 +1,58 @@
 package app.service.serviceImplementation;
 
+import app.domain.entities.Crane;
+import app.domain.entities.dto.CargoTypeDto;
 import app.domain.entities.dto.CraneDto;
-import app.domain.enums.CargoType;
-import org.springframework.stereotype.Service;
+import app.mapper.CraneMapper;
+import app.repos.CraneRepository;
 import app.service.CraneServ;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 @Service
 public class CraneServImpl implements CraneServ {
-    private static List<CraneDto> craneDtoList = new ArrayList<>();
+    private final CraneRepository craneRepository;
+    private final CraneMapper craneMapper;
+
+    @Autowired
+    public CraneServImpl(CraneRepository craneRepository, CraneMapper craneMapper) {
+        this.craneRepository = craneRepository;
+        this.craneMapper = craneMapper;
+    }
 
     @Override
     public void initCranes() {
-        craneDtoList.add(new CraneDto(CargoType.BULK_CARGO, 2000));
-        craneDtoList.add(new CraneDto(CargoType.LIQUID_CARGO, 1500));
-        craneDtoList.add(new CraneDto(CargoType.CONTAINERS, 6500));
-        //  craneList.add(new Crane(EnumCargoType.LIQUID_CARGO, 6000));
+
+        Crane c1 = craneMapper.toCraneModel(new CraneDto(new CargoTypeDto(1), 2000.0));
+        Crane c2 = craneMapper.toCraneModel(new CraneDto(new CargoTypeDto(2), 2000.0));
+        Crane c3 = craneMapper.toCraneModel(new CraneDto(new CargoTypeDto(3), 2000.0));
+        craneRepository.save(c1);
+        craneRepository.save(c2);
+        craneRepository.save(c3);
     }
 
     @Override
-    public void startOfUnload(CraneDto craneDto) {
-        List<CraneDto> craneDtos = getCranes();
-        for (CraneDto c : craneDtos) {
-            if (c.equals(craneDto)) c.setActive(true);
-        }
-        craneDtoList = new ArrayList<>(craneDtos);
+    public void startOfUnload(CraneDto crane) {
+        Crane craneModel = craneMapper.toCraneModel(crane);
+        if (craneModel == null) return;
+        craneModel.setActive(true);
+        craneRepository.save(craneModel);
     }
 
     @Override
-    public void endOfUnload(CraneDto craneDto) {
-        List<CraneDto> craneDtos = getCranes();
-        for (CraneDto c : craneDtos) {
-            if (c.equals(craneDto)) c.setActive(false);
-        }
-        craneDtoList = new ArrayList<>(craneDtos);
+    public void endOfUnload(CraneDto crane) {
+
+        Crane craneModel = craneMapper.toCraneModel(crane);
+        if (craneModel == null) return;
+        craneModel.setActive(false);
+        craneRepository.save(craneModel);
+
     }
 
     @Override
-    public CraneDto getFreeCraneByType(CargoType type) {
-        List<CraneDto> craneDtos = getCranes();
-        for (CraneDto c : craneDtos) {
-            if (c.getCargoType().equals(type) && !c.isActive()) return c;
-        }
-        return null;
+    public CraneDto getFreeCraneByType(CargoTypeDto type) {
+        Crane craneModel = craneRepository.findFirstByActiveFalseAndCargo_Name(type.getName());
+        return craneMapper.toCrane(craneModel);
     }
 
-    @Override
-    public List<CraneDto> getCranes() {
-        return craneDtoList;
-    }
 }

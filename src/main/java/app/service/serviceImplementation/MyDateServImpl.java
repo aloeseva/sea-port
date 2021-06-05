@@ -1,8 +1,9 @@
 package app.service.serviceImplementation;
 
 import app.domain.entities.dto.MyDate;
-import org.springframework.stereotype.Service;
+import app.mapper.MyDateMapper;
 import app.service.MyDateServ;
+import org.springframework.stereotype.Service;
 
 import java.util.Random;
 
@@ -28,5 +29,8 @@ public class MyDateServImpl implements MyDateServ {
       return  date;
     }
 
-
+    @Override
+    public String toString(MyDate date) {
+        return MyDateMapper.map(date);
+    }
 }
